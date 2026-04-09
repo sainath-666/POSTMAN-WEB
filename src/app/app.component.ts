@@ -1,4 +1,4 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { Component, inject, HostListener, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -7,6 +7,7 @@ import { RequestBuilderComponent } from './components/request-builder/request-bu
 import { ResponseViewerComponent } from './components/response-viewer/response-viewer.component';
 import { ConsolePanelComponent } from './components/console-panel/console-panel.component';
 import { EnvironmentModalComponent } from './components/environment-modal/environment-modal.component';
+import { SwaggerImportModalComponent } from './components/swagger-import-modal/swagger-import-modal.component';
 import { ToastComponent } from './components/toast/toast.component';
 import { TabService } from './services/tab.service';
 import { EnvironmentService } from './services/environment.service';
@@ -25,6 +26,7 @@ import { ToastService } from './services/toast.service';
     ResponseViewerComponent,
     ConsolePanelComponent,
     EnvironmentModalComponent,
+    SwaggerImportModalComponent,
     ToastComponent,
   ],
   templateUrl: './app.component.html',
@@ -36,10 +38,14 @@ export class App {
   storage = inject(StorageService);
   toast = inject(ToastService);
 
+  /** Sidebar reference for reloading collections after swagger import */
+  sidebarRef = viewChild(SidebarComponent);
+
   /** UI state */
   sidebarOpen = true;
   consoleOpen = false;
   showEnvModal = false;
+  showSwaggerModal = false;
   theme: 'dark' | 'light' = 'dark';
 
   constructor() {
@@ -104,5 +110,11 @@ export class App {
 
   setActiveEnvironment(id: string | null) {
     this.envService.setActive(id);
+  }
+
+  onSwaggerImported() {
+    this.showSwaggerModal = false;
+    // Reload sidebar collections
+    this.sidebarRef()?.loadData();
   }
 }

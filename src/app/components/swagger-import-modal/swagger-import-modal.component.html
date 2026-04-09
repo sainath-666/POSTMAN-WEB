@@ -1,0 +1,187 @@
+<div class="modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-title-row">
+        <div class="modal-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div class="modal-text">
+          <h2>Import from Swagger</h2>
+          <p class="modal-subtitle">Paste a Swagger / OpenAPI spec URL to auto-generate a collection</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="close.emit()" title="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- URL Input Section -->
+    <div class="url-section">
+      <label class="input-label">Swagger / OpenAPI URL</label>
+      <div class="url-input-row">
+        <div class="url-input-wrapper">
+          <svg class="url-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </svg>
+          <input
+            class="url-input"
+            type="url"
+            [(ngModel)]="swaggerUrl"
+            (paste)="onPaste($event)"
+            placeholder="https://petstore.swagger.io/v2/swagger.json"
+            [disabled]="isLoading || isPreviewing"
+            (keydown.enter)="onPreview()"
+          />
+          @if (swaggerUrl) {
+            <button class="btn-clear" (click)="swaggerUrl = ''; previewCollection = null; error = ''">×</button>
+          }
+        </div>
+        <button class="btn-preview" (click)="onPreview()" [disabled]="!swaggerUrl.trim() || isPreviewing || isLoading">
+          @if (isPreviewing) {
+            <span class="spinner"></span>
+            Fetching...
+          } @else {
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Preview
+          }
+        </button>
+      </div>
+
+      <!-- Quick Try Links -->
+      <div class="quick-links">
+        <span class="quick-label">Try:</span>
+        <button class="quick-link" (click)="swaggerUrl = 'https://petstore.swagger.io/v2/swagger.json'; onPreview()">Petstore v2</button>
+        <button class="quick-link" (click)="swaggerUrl = 'https://petstore3.swagger.io/api/v3/openapi.json'; onPreview()">Petstore v3</button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    @if (error) {
+      <div class="error-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        {{ error }}
+      </div>
+    }
+
+    <!-- Preview Section -->
+    @if (previewCollection) {
+      <div class="preview-section">
+        <!-- Spec Info -->
+        <div class="spec-info">
+          <div class="spec-badge">
+            @if (previewSpec?.openapi) {
+              <span class="badge badge-v3">OpenAPI {{ previewSpec.openapi }}</span>
+            } @else if (previewSpec?.swagger) {
+              <span class="badge badge-v2">Swagger {{ previewSpec.swagger }}</span>
+            }
+          </div>
+          <div class="spec-details">
+            <h3 class="spec-name">{{ previewCollection.name }}</h3>
+            @if (previewCollection.description) {
+              <p class="spec-desc">{{ previewCollection.description }}</p>
+            }
+          </div>
+          <div class="spec-stats">
+            <div class="stat">
+              <span class="stat-value">{{ getTotalEndpoints() }}</span>
+              <span class="stat-label">Endpoints</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ previewCollection.folders.length }}</span>
+              <span class="stat-label">Tags</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ previewCollection.requests.length }}</span>
+              <span class="stat-label">Untagged</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoints Tree -->
+        <div class="endpoints-tree">
+          <!-- Folders (tags) -->
+          @for (folder of previewCollection.folders; track folder.id) {
+            <div class="tree-folder">
+              <div class="tree-folder-header" (click)="toggleFolder(folder.id)">
+                <svg class="chevron" [class.rotated]="expandedFolders.has(folder.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+                <svg class="folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                </svg>
+                <span class="folder-name">{{ folder.name }}</span>
+                <span class="folder-count">{{ folder.requests.length }}</span>
+              </div>
+              @if (expandedFolders.has(folder.id)) {
+                <div class="tree-children">
+                  @for (req of folder.requests; track req.id) {
+                    <div class="tree-endpoint">
+                      <span class="method-pill" [ngClass]="getMethodClass(req.method)">{{ req.method }}</span>
+                      <span class="endpoint-name">{{ req.name }}</span>
+                      <span class="endpoint-path">{{ req.url }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Untagged requests -->
+          @if (previewCollection.requests.length > 0) {
+            <div class="tree-folder">
+              <div class="tree-folder-header untagged">
+                <svg class="folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+                </svg>
+                <span class="folder-name">Untagged</span>
+                <span class="folder-count">{{ previewCollection.requests.length }}</span>
+              </div>
+              <div class="tree-children">
+                @for (req of previewCollection.requests; track req.id) {
+                  <div class="tree-endpoint">
+                    <span class="method-pill" [ngClass]="getMethodClass(req.method)">{{ req.method }}</span>
+                    <span class="endpoint-name">{{ req.name }}</span>
+                    <span class="endpoint-path">{{ req.url }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="close.emit()">Cancel</button>
+      <button class="btn-import" (click)="onImport()" [disabled]="!swaggerUrl.trim() || isLoading">
+        @if (isLoading) {
+          <span class="spinner"></span>
+          Importing...
+        } @else {
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Import Collection
+        }
+      </button>
+    </div>
+  </div>
+</div>

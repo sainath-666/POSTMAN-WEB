@@ -53,7 +53,7 @@
   <div class="app-body">
     <!-- Sidebar -->
     <aside class="panel panel-sidebar" [class.collapsed]="!sidebarOpen">
-      <app-sidebar />
+      <app-sidebar (openSwaggerImport)="showSwaggerModal = true" />
     </aside>
 
     <!-- Main Area (tabs + builder + response) -->
@@ -109,6 +109,11 @@
 <!-- Environment Modal -->
 @if (showEnvModal) {
   <app-environment-modal (close)="showEnvModal = false" />
+}
+
+<!-- Swagger Import Modal -->
+@if (showSwaggerModal) {
+  <app-swagger-import-modal (close)="showSwaggerModal = false" (imported)="onSwaggerImported()" />
 }
 
 <!-- Toasts -->

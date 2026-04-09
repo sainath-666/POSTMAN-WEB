@@ -77,6 +77,8 @@
 .btn-icon-sm:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
 .btn-icon-sm.btn-accent { color: var(--accent); }
 .btn-icon-sm.btn-accent:hover { background: rgba(var(--accent-rgb),0.15); }
+.btn-icon-sm.btn-swagger { color: var(--status-success); }
+.btn-icon-sm.btn-swagger:hover { background: rgba(var(--status-success-rgb),0.15); color: var(--status-success); }
 .btn-icon-xs { display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; border-radius: 3px; transition: all 0.12s; }
 .btn-icon-xs:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
 .btn-danger:hover { color: var(--status-error) !important; }
