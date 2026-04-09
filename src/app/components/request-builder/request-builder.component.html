@@ -1,0 +1,182 @@
+<div class="request-builder">
+  <!-- Request Name -->
+  <div class="request-name-bar">
+    <input
+      class="request-name-input"
+      [(ngModel)]="requestName"
+      placeholder="Request Name"
+      id="requestNameInput"
+    />
+    <div class="request-actions">
+      <button class="btn btn-save" (click)="saveRequest()" title="Save Request" id="saveRequestBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save
+      </button>
+      <button class="btn btn-ghost" (click)="resetForm()" title="New Request" id="newRequestBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        New
+      </button>
+    </div>
+  </div>
+
+  @if (showSaveDropdown && collections.length > 0) {
+    <div class="save-dropdown">
+      <span class="save-dropdown-label">Save to collection:</span>
+      @for (col of collections; track col.id) {
+        <button class="save-dropdown-item" (click)="saveToCollection(col.id)">
+          {{ col.name }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- URL Bar -->
+  <div class="url-bar">
+    <div class="method-select-wrapper" [ngClass]="getMethodClass()">
+      <select class="method-select" [(ngModel)]="method" id="methodSelect">
+        @for (m of methods; track m) {
+          <option [value]="m">{{ m }}</option>
+        }
+      </select>
+    </div>
+    <input
+      class="url-input"
+      [(ngModel)]="url"
+      placeholder="Enter request URL (e.g., https://jsonplaceholder.typicode.com/posts)"
+      (keydown.enter)="sendRequest()"
+      id="urlInput"
+    />
+    <button
+      class="btn btn-send"
+      [class.loading]="isLoading"
+      (click)="sendRequest()"
+      [disabled]="isLoading"
+      id="sendRequestBtn"
+    >
+      @if (isLoading) {
+        <div class="spinner"></div>
+        Sending...
+      } @else {
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Send
+      }
+    </button>
+  </div>
+
+  <!-- Tabs: Headers / Body -->
+  <div class="tabs-bar">
+    <button
+      class="tab"
+      [class.active]="activeTab === 'headers'"
+      (click)="setTab('headers')"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 7h16M4 12h16M4 17h10"/>
+      </svg>
+      Headers
+      @if (headers.length > 0 && headers[0].key) {
+        <span class="tab-badge">{{ headers.length }}</span>
+      }
+    </button>
+    <button
+      class="tab"
+      [class.active]="activeTab === 'body'"
+      (click)="setTab('body')"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Body
+      @if (body) {
+        <span class="tab-badge-dot"></span>
+      }
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <!-- Headers Tab -->
+    @if (activeTab === 'headers') {
+      <div class="headers-section">
+        <div class="headers-table">
+          <div class="headers-header-row">
+            <span class="header-col">Key</span>
+            <span class="header-col">Value</span>
+            <span class="header-action-col"></span>
+          </div>
+          @for (header of headers; track $index) {
+            <div class="header-row">
+              <input
+                class="header-input"
+                [(ngModel)]="header.key"
+                placeholder="Header key"
+              />
+              <input
+                class="header-input"
+                [(ngModel)]="header.value"
+                placeholder="Header value"
+              />
+              <button class="btn-icon-sm btn-danger" (click)="removeHeader($index)" title="Remove header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          }
+        </div>
+        <button class="btn btn-ghost btn-add-header" (click)="addHeader()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Add Header
+        </button>
+      </div>
+    }
+
+    <!-- Body Tab -->
+    @if (activeTab === 'body') {
+      <div class="body-section">
+        <div class="body-toolbar">
+          <span class="body-label">JSON Body</span>
+          <button class="btn btn-ghost btn-sm" (click)="formatBody()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10H7M21 6H3M21 14H3M21 18H7"/>
+            </svg>
+            Format
+          </button>
+        </div>
+        <textarea
+          class="body-editor"
+          [(ngModel)]="body"
+          (input)="validateBody()"
+          placeholder='{ "key": "value" }'
+          spellcheck="false"
+          id="bodyEditor"
+        ></textarea>
+        @if (bodyError) {
+          <div class="body-error">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            {{ bodyError }}
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

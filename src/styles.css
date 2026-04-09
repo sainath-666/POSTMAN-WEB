@@ -1,0 +1,141 @@
+/*
+ * ═══════════════════════════════════════════════════════
+ *  Smart API Tester — Global Design System
+ * ═══════════════════════════════════════════════════════
+ *
+ *  Dark theme with premium color palette.
+ *  All design tokens are defined as CSS custom properties.
+ */
+
+/* ─── Google Fonts are loaded in index.html ─── */
+
+/* ─── CSS Reset ─── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Design Tokens (Dark Theme) ─── */
+:root {
+  /* Surfaces */
+  --surface-primary: #0f0f1a;
+  --surface-secondary: #151525;
+  --surface-elevated: #1a1a2e;
+  --surface-hover: #22223a;
+
+  /* Text */
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6b6b82;
+
+  /* Borders */
+  --border-color: #2a2a40;
+
+  /* Accent — Indigo/Violet */
+  --accent: #6366f1;
+  --accent-rgb: 99, 102, 241;
+  --accent-muted: #4f46e5;
+  --accent-light: #818cf8;
+
+  /* Status Colors */
+  --status-success: #4ade80;
+  --status-success-rgb: 74, 222, 128;
+  --status-warning: #fbbf24;
+  --status-warning-rgb: 251, 191, 36;
+  --status-error: #f87171;
+  --status-error-rgb: 248, 113, 113;
+
+  /* HTTP Method Colors */
+  --method-get: #4ade80;
+  --method-get-rgb: 74, 222, 128;
+  --method-post: #60a5fa;
+  --method-post-rgb: 96, 165, 250;
+  --method-put: #fbbf24;
+  --method-put-rgb: 251, 191, 36;
+  --method-delete: #f87171;
+  --method-delete-rgb: 248, 113, 113;
+  --method-patch: #c084fc;
+  --method-patch-rgb: 192, 132, 252;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* ─── Scrollbar Styles ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(var(--accent-rgb), 0.3);
+  color: var(--text-primary);
+}
+
+/* ─── Focus Styles ─── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Body Background ─── */
+body {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+/* ─── Link Reset ─── */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* ─── Button Reset ─── */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ─── Input Reset ─── */
+input, textarea, select {
+  font-family: inherit;
+}
+
+select option {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}

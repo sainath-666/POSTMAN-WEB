@@ -1,0 +1,107 @@
+<div class="response-viewer">
+  <!-- Header -->
+  <div class="viewer-header">
+    <h3 class="viewer-title">Response</h3>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="loading-animation">
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring delay-1"></div>
+        <div class="pulse-ring delay-2"></div>
+      </div>
+      <span class="loading-text">Sending request...</span>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (!response && !isLoading) {
+    <div class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+      <p class="empty-title">No response yet</p>
+      <p class="empty-subtitle">Send a request to see the response here</p>
+    </div>
+  }
+
+  <!-- Response Content -->
+  @if (response && !isLoading) {
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span class="status-badge" [ngClass]="getStatusClass()">
+        {{ response.statusCode }} {{ response.statusText }}
+      </span>
+      <div class="status-meta">
+        <span class="meta-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          {{ response.responseTime }} ms
+        </span>
+        <span class="meta-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          {{ getBodySize() }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Response Toolbar -->
+    <div class="response-toolbar">
+      <div class="toolbar-tabs">
+        <button
+          class="toolbar-tab"
+          [class.active]="!showRaw"
+          (click)="showRaw = false"
+        >
+          Pretty
+        </button>
+        <button
+          class="toolbar-tab"
+          [class.active]="showRaw"
+          (click)="showRaw = true"
+        >
+          Raw
+        </button>
+      </div>
+      <button class="btn-icon-sm" title="Copy to clipboard" (click)="copyBody()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Response Body -->
+    <div class="response-body-container">
+      <pre class="response-body"><code>{{ showRaw ? getRawBody() : getFormattedBody() }}</code></pre>
+    </div>
+
+    <!-- Response Headers (collapsible) -->
+    @if (getHeaderEntries().length > 0) {
+      <details class="response-headers-section">
+        <summary class="headers-summary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7h16M4 12h16M4 17h10"/>
+          </svg>
+          Response Headers ({{ getHeaderEntries().length }})
+        </summary>
+        <div class="headers-list">
+          @for (header of getHeaderEntries(); track header.key) {
+            <div class="header-entry">
+              <span class="header-key">{{ header.key }}</span>
+              <span class="header-value">{{ header.value }}</span>
+            </div>
+          }
+        </div>
+      </details>
+    }
+  }
+</div>

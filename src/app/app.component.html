@@ -1,0 +1,66 @@
+<div class="app-layout">
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-hamburger" (click)="toggleSidebar()" title="Toggle Sidebar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="app-brand">
+        <span class="brand-icon">⚡</span>
+        <h1 class="brand-name">API Tester</h1>
+        <span class="brand-badge">PRO</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-hint">Frontend-only • No backend required</span>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="app-body">
+    <!-- Left Sidebar: Collections -->
+    <aside class="panel panel-sidebar" [class.collapsed]="!sidebarOpen">
+      <app-sidebar
+        [collections]="collections"
+        [activeRequestId]="activeRequestId"
+        (collectionsChange)="onCollectionsChange($event)"
+        (requestSelected)="onRequestSelected($event)"
+        (newRequestClicked)="onNewRequest($event)"
+      />
+    </aside>
+
+    <!-- Resize Handle (visual only) -->
+    <div class="panel-divider"></div>
+
+    <!-- Middle Panel: Request Builder -->
+    <section class="panel panel-builder">
+      <app-request-builder
+        [request]="activeRequest"
+        [activeCollectionId]="activeCollectionId"
+        [collections]="collections"
+        (collectionsChange)="onCollectionsChange($event)"
+        (responseReceived)="onResponseReceived($event)"
+        (loadingChange)="onLoadingChange($event)"
+        (requestSaved)="onRequestSaved($event)"
+      />
+    </section>
+
+    <!-- Resize Handle (visual only) -->
+    <div class="panel-divider"></div>
+
+    <!-- Right Panel: Response Viewer -->
+    <section class="panel panel-response">
+      <app-response-viewer
+        [response]="response"
+        [isLoading]="isLoading"
+      />
+    </section>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
+<app-toast />
