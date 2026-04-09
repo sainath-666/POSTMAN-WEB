@@ -1,112 +1,213 @@
 <div class="sidebar">
-  <!-- Sidebar Header -->
-  <div class="sidebar-header">
-    <h2 class="sidebar-title">
-      <span class="logo-icon">⚡</span> Collections
-    </h2>
-    <button class="btn-icon btn-new-collection" title="New Collection" (click)="createCollection()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12h14"/>
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input class="search-input" [(ngModel)]="searchQuery" placeholder="Search requests..." />
+    @if (searchQuery) {
+      <button class="btn-clear-search" (click)="searchQuery = ''">×</button>
+    }
+  </div>
+
+  <!-- Section Tabs -->
+  <div class="section-tabs">
+    <button class="section-tab" [class.active]="activeSection === 'collections'" (click)="activeSection = 'collections'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
       </svg>
+      Collections
+    </button>
+    <button class="section-tab" [class.active]="activeSection === 'history'" (click)="activeSection = 'history'; history = storage.getHistory()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      History
     </button>
   </div>
 
-  <!-- Collections List -->
-  <div class="collections-list">
-    @if (collections.length === 0) {
-      <div class="empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
-          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-        </svg>
-        <p>No collections yet</p>
-        <button class="btn-create-first" (click)="createCollection()">Create your first collection</button>
+  <!-- ═══════════ COLLECTIONS VIEW ═══════════ -->
+  @if (activeSection === 'collections') {
+    <div class="section-header">
+      <span class="section-label">Collections</span>
+      <div class="section-actions">
+        <button class="btn-icon-sm" title="Import" (click)="importCollections()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button class="btn-icon-sm" title="Export All" (click)="exportCollections()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </button>
+        <button class="btn-icon-sm btn-accent" title="New Collection" (click)="createCollection()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
       </div>
-    }
+    </div>
 
-    @for (collection of collections; track collection.id) {
-      <div class="collection-item">
-        <!-- Collection Header -->
-        <div
-          class="collection-header"
-          [class.expanded]="expandedCollections.has(collection.id)"
-          (click)="toggleCollection(collection.id)"
-        >
-          <div class="collection-left">
-            <svg
-              class="chevron"
-              [class.rotated]="expandedCollections.has(collection.id)"
-              width="14" height="14" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2"
-            >
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
-
-            @if (renamingCollectionId === collection.id) {
-              <input
-                class="rename-input"
-                [(ngModel)]="renameValue"
-                (keydown.enter)="confirmRename(collection.id)"
-                (keydown.escape)="cancelRename()"
-                (blur)="confirmRename(collection.id)"
-                (click)="$event.stopPropagation()"
-                autofocus
-              />
-            } @else {
-              <span class="collection-name">{{ collection.name }}</span>
-              <span class="request-count">{{ collection.requests.length }}</span>
-            }
-          </div>
-
-          <div class="collection-actions">
-            <button class="btn-icon-sm" title="Add Request" (click)="onNewRequest(collection.id, $event)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-            </button>
-            <button class="btn-icon-sm" title="Rename" (click)="startRename(collection, $event)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button class="btn-icon-sm btn-danger" title="Delete" (click)="deleteCollection(collection.id, collection.name, $event)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
-            </button>
-          </div>
+    <div class="scroll-area">
+      @if (filteredCollections.length === 0) {
+        <div class="empty-state">
+          <p>{{ searchQuery ? 'No matches found' : 'No collections yet' }}</p>
+          @if (!searchQuery) {
+            <button class="btn-sm btn-accent" (click)="createCollection()">Create Collection</button>
+          }
         </div>
+      }
 
-        <!-- Requests inside collection -->
-        @if (expandedCollections.has(collection.id)) {
-          <div class="requests-list">
-            @if (collection.requests.length === 0) {
-              <div class="empty-requests">
-                <span>No requests</span>
-              </div>
-            }
-            @for (request of collection.requests; track request.id) {
-              <div
-                class="request-item"
-                [class.active]="request.id === activeRequestId"
-                (click)="onRequestClick(collection, request)"
-              >
-                <span class="method-badge" [ngClass]="getMethodClass(request.method)">{{ request.method }}</span>
-                <span class="request-name">{{ request.name }}</span>
-                <button
-                  class="btn-icon-xs btn-danger"
-                  title="Delete Request"
-                  (click)="deleteRequest(collection.id, request, $event)"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-            }
+      @for (col of filteredCollections; track col.id) {
+        <div class="tree-item collection-item">
+          <!-- Collection Header -->
+          <div class="tree-header" [class.expanded]="expandedCollections.has(col.id)" (click)="toggleCollection(col.id)">
+            <div class="tree-left">
+              <svg class="chevron" [class.rotated]="expandedCollections.has(col.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              <svg class="tree-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+              </svg>
+              @if (renamingId === col.id) {
+                <input class="rename-input" [(ngModel)]="renameValue" (keydown.enter)="confirmRename('collection', col.id)" (keydown.escape)="renamingId = null" (blur)="confirmRename('collection', col.id)" (click)="stopPropagation($event)" autofocus />
+              } @else {
+                <span class="tree-name">{{ col.name }}</span>
+              }
+              <span class="count-badge">{{ getTotalRequests(col) }}</span>
+            </div>
+            <div class="tree-actions">
+              <button class="btn-icon-xs" title="Add Request" (click)="stopPropagation($event); addRequest(col.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+              <button class="btn-icon-xs" title="Add Folder" (click)="stopPropagation($event); addFolder(col.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><path d="M12 11v6M9 14h6"/></svg>
+              </button>
+              <button class="btn-icon-xs" title="Rename" (click)="startRename(col.id, col.name, $event)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="btn-icon-xs" title="Duplicate" (click)="stopPropagation($event); duplicateCollection(col.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+              <button class="btn-icon-xs btn-danger" title="Delete" (click)="stopPropagation($event); deleteCollection(col.id, col.name)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+              </button>
+            </div>
           </div>
+
+          <!-- Collection Content (expanded) -->
+          @if (expandedCollections.has(col.id)) {
+            <div class="tree-children">
+              <!-- Folders -->
+              @for (folder of col.folders; track folder.id) {
+                <div class="tree-item folder-item">
+                  <div class="tree-header" [class.expanded]="expandedFolders.has(folder.id)" (click)="toggleFolder(folder.id)">
+                    <div class="tree-left">
+                      <svg class="chevron" [class.rotated]="expandedFolders.has(folder.id)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                      <svg class="tree-icon folder-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                      @if (renamingId === folder.id) {
+                        <input class="rename-input" [(ngModel)]="renameValue" (keydown.enter)="confirmRename('folder', folder.id, col.id)" (keydown.escape)="renamingId = null" (blur)="confirmRename('folder', folder.id, col.id)" (click)="stopPropagation($event)" autofocus />
+                      } @else {
+                        <span class="tree-name">{{ folder.name }}</span>
+                      }
+                      <span class="count-badge">{{ folder.requests.length }}</span>
+                    </div>
+                    <div class="tree-actions">
+                      <button class="btn-icon-xs" title="Add Request" (click)="stopPropagation($event); addRequest(col.id, folder.id)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                      </button>
+                      <button class="btn-icon-xs" title="Rename" (click)="startRename(folder.id, folder.name, $event)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="btn-icon-xs btn-danger" title="Delete" (click)="stopPropagation($event); deleteFolder(col.id, folder.id, folder.name)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (expandedFolders.has(folder.id)) {
+                    <div class="tree-children">
+                      @for (req of folder.requests; track req.id) {
+                        <div class="request-item" [class.active]="isActiveRequest(req.id)" (click)="openRequest(req, col.id, folder.id)">
+                          <span class="method-badge" [ngClass]="getMethodClass(req.method)">{{ req.method }}</span>
+                          <span class="request-name">{{ req.name }}</span>
+                          <div class="request-actions">
+                            <button class="btn-icon-xs" title="Duplicate" (click)="stopPropagation($event); duplicateRequest(col.id, req.id, folder.id)">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            </button>
+                            <button class="btn-icon-xs btn-danger" title="Delete" (click)="stopPropagation($event); deleteRequest(col.id, req.id, req.name, folder.id)">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                        </div>
+                      }
+                      @if (folder.requests.length === 0) {
+                        <div class="empty-folder">No requests</div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Root Requests -->
+              @for (req of col.requests; track req.id) {
+                <div class="request-item" [class.active]="isActiveRequest(req.id)" (click)="openRequest(req, col.id)">
+                  <span class="method-badge" [ngClass]="getMethodClass(req.method)">{{ req.method }}</span>
+                  <span class="request-name">{{ req.name }}</span>
+                  <div class="request-actions">
+                    <button class="btn-icon-xs" title="Duplicate" (click)="stopPropagation($event); duplicateRequest(col.id, req.id)">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                    <button class="btn-icon-xs btn-danger" title="Delete" (click)="stopPropagation($event); deleteRequest(col.id, req.id, req.name)">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+
+              @if (col.requests.length === 0 && col.folders.length === 0) {
+                <div class="empty-folder">Empty collection</div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════ HISTORY VIEW ═══════════ -->
+  @if (activeSection === 'history') {
+    <div class="section-header">
+      <span class="section-label">History</span>
+      <div class="section-actions">
+        @if (history.length > 0) {
+          <button class="btn-icon-sm btn-danger" title="Clear History" (click)="clearHistory()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button>
         }
       </div>
-    }
-  </div>
+    </div>
+
+    <div class="scroll-area">
+      @if (filteredHistory.length === 0) {
+        <div class="empty-state">
+          <p>{{ searchQuery ? 'No matches' : 'No history yet' }}</p>
+          <span class="empty-hint">Send a request to see it here</span>
+        </div>
+      }
+
+      @for (entry of filteredHistory; track entry.id) {
+        <div class="history-item" (click)="openFromHistory(entry)">
+          <div class="history-top">
+            <span class="method-badge" [ngClass]="getMethodClass(entry.request.method)">{{ entry.request.method }}</span>
+            <span class="history-status" [class.status-ok]="entry.statusCode >= 200 && entry.statusCode < 300" [class.status-err]="entry.statusCode >= 400">
+              {{ entry.statusCode }}
+            </span>
+            <span class="history-time">{{ entry.responseTime }}ms</span>
+          </div>
+          <div class="history-url">{{ entry.request.url }}</div>
+          <div class="history-timestamp">{{ formatTime(entry.timestamp) }}</div>
+        </div>
+      }
+    </div>
+  }
 </div>

@@ -1,182 +1,268 @@
-<div class="request-builder">
-  <!-- Request Name -->
-  <div class="request-name-bar">
-    <input
-      class="request-name-input"
-      [(ngModel)]="requestName"
-      placeholder="Request Name"
-      id="requestNameInput"
-    />
-    <div class="request-actions">
-      <button class="btn btn-save" (click)="saveRequest()" title="Save Request" id="saveRequestBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
+@if (request) {
+<div class="builder" (keydown)="onKeyDown($event)">
+  <!-- ═══ Request Name ═══ -->
+  <div class="name-bar">
+    <input class="name-input" [ngModel]="request.name" (ngModelChange)="updateName($event)" placeholder="Request Name" />
+    <div class="name-actions">
+      <button class="btn btn-save" (click)="save()" title="Save (Ctrl+S)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Save
       </button>
-      <button class="btn btn-ghost" (click)="resetForm()" title="New Request" id="newRequestBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="12" y1="18" x2="12" y2="12"/>
-          <line x1="9" y1="15" x2="15" y2="15"/>
-        </svg>
-        New
+      <button class="btn btn-ghost" (click)="tabService.duplicateActiveTab()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Duplicate
       </button>
     </div>
   </div>
 
-  @if (showSaveDropdown && collections.length > 0) {
+  <!-- Save dropdown -->
+  @if (showSaveMenu) {
     <div class="save-dropdown">
-      <span class="save-dropdown-label">Save to collection:</span>
-      @for (col of collections; track col.id) {
-        <button class="save-dropdown-item" (click)="saveToCollection(col.id)">
-          {{ col.name }}
-        </button>
+      <div class="dropdown-label">Save to collection:</div>
+      @for (col of collections(); track col.id) {
+        <button class="dropdown-item" (click)="saveToCollection(col.id)">{{ col.name }}</button>
+      }
+      @if (collections().length === 0) {
+        <div class="dropdown-empty">No collections. Create one first.</div>
       }
     </div>
   }
 
-  <!-- URL Bar -->
+  <!-- ═══ URL Bar ═══ -->
   <div class="url-bar">
-    <div class="method-select-wrapper" [ngClass]="getMethodClass()">
-      <select class="method-select" [(ngModel)]="method" id="methodSelect">
-        @for (m of methods; track m) {
-          <option [value]="m">{{ m }}</option>
-        }
+    <div class="method-wrapper" [ngClass]="getMethodClass()">
+      <select class="method-select" [ngModel]="request.method" (ngModelChange)="updateMethod($event)">
+        @for (m of methods; track m) { <option [value]="m">{{ m }}</option> }
       </select>
+      <svg class="select-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
     </div>
-    <input
-      class="url-input"
-      [(ngModel)]="url"
-      placeholder="Enter request URL (e.g., https://jsonplaceholder.typicode.com/posts)"
-      (keydown.enter)="sendRequest()"
-      id="urlInput"
-    />
-    <button
-      class="btn btn-send"
-      [class.loading]="isLoading"
-      (click)="sendRequest()"
-      [disabled]="isLoading"
-      id="sendRequestBtn"
-    >
-      @if (isLoading) {
-        <div class="spinner"></div>
-        Sending...
+    <input class="url-input" [ngModel]="request.url" (ngModelChange)="updateUrl($event)" placeholder="Enter request URL or paste cURL" (keydown.enter)="send()" />
+    <button class="btn-send" [class.loading]="tab()?.isLoading" (click)="send()" [disabled]="tab()?.isLoading">
+      @if (tab()?.isLoading) {
+        <div class="spinner"></div> Sending
       } @else {
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="22" y1="2" x2="11" y2="13"/>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Send
       }
     </button>
   </div>
 
-  <!-- Tabs: Headers / Body -->
-  <div class="tabs-bar">
-    <button
-      class="tab"
-      [class.active]="activeTab === 'headers'"
-      (click)="setTab('headers')"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 7h16M4 12h16M4 17h10"/>
-      </svg>
-      Headers
-      @if (headers.length > 0 && headers[0].key) {
-        <span class="tab-badge">{{ headers.length }}</span>
-      }
+  <!-- ═══ Sub Tabs ═══ -->
+  <div class="sub-tabs">
+    <button class="sub-tab" [class.active]="activeSubTab === 'params'" (click)="activeSubTab = 'params'">
+      Params @if (getEnabledCount(request.params) > 0) { <span class="badge">{{ getEnabledCount(request.params) }}</span> }
     </button>
-    <button
-      class="tab"
-      [class.active]="activeTab === 'body'"
-      (click)="setTab('body')"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      Body
-      @if (body) {
-        <span class="tab-badge-dot"></span>
-      }
+    <button class="sub-tab" [class.active]="activeSubTab === 'auth'" (click)="activeSubTab = 'auth'">
+      Authorization @if (request.auth.type !== 'none') { <span class="badge-dot"></span> }
+    </button>
+    <button class="sub-tab" [class.active]="activeSubTab === 'headers'" (click)="activeSubTab = 'headers'">
+      Headers @if (getEnabledCount(request.headers) > 0) { <span class="badge">{{ getEnabledCount(request.headers) }}</span> }
+    </button>
+    <button class="sub-tab" [class.active]="activeSubTab === 'body'" (click)="activeSubTab = 'body'">
+      Body @if (request.body.type !== 'none') { <span class="badge-dot"></span> }
     </button>
   </div>
 
-  <!-- Tab Content -->
-  <div class="tab-content">
-    <!-- Headers Tab -->
-    @if (activeTab === 'headers') {
-      <div class="headers-section">
-        <div class="headers-table">
-          <div class="headers-header-row">
-            <span class="header-col">Key</span>
-            <span class="header-col">Value</span>
-            <span class="header-action-col"></span>
+  <!-- ═══ Sub Tab Content ═══ -->
+  <div class="sub-content">
+
+    <!-- ─── PARAMS TAB ─── -->
+    @if (activeSubTab === 'params') {
+      <div class="kv-section">
+        <div class="kv-header">
+          <span>Query Parameters</span>
+          <button class="btn-xs btn-ghost" (click)="addPair('params')">+ Add</button>
+        </div>
+        <div class="kv-table">
+          <div class="kv-head">
+            <span class="kv-check-col"></span>
+            <span class="kv-col">Key</span>
+            <span class="kv-col">Value</span>
+            <span class="kv-col-desc">Description</span>
+            <span class="kv-act-col"></span>
           </div>
-          @for (header of headers; track $index) {
-            <div class="header-row">
-              <input
-                class="header-input"
-                [(ngModel)]="header.key"
-                placeholder="Header key"
-              />
-              <input
-                class="header-input"
-                [(ngModel)]="header.value"
-                placeholder="Header value"
-              />
-              <button class="btn-icon-sm btn-danger" (click)="removeHeader($index)" title="Remove header">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
+          @for (p of request.params; track p.id; let i = $index) {
+            <div class="kv-row" [class.disabled]="!p.enabled">
+              <input type="checkbox" class="kv-check" [checked]="p.enabled" (change)="togglePair('params', i)" />
+              <input class="kv-input" [value]="p.key" (input)="updatePair('params', i, 'key', $any($event.target).value)" placeholder="Key" />
+              <input class="kv-input" [value]="p.value" (input)="updatePair('params', i, 'value', $any($event.target).value)" placeholder="Value" />
+              <input class="kv-input kv-desc" [value]="p.description" (input)="updatePair('params', i, 'description', $any($event.target).value)" placeholder="Description" />
+              <button class="btn-icon-xs btn-danger" (click)="removePair('params', i)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
           }
         </div>
-        <button class="btn btn-ghost btn-add-header" (click)="addHeader()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Add Header
-        </button>
       </div>
     }
 
-    <!-- Body Tab -->
-    @if (activeTab === 'body') {
-      <div class="body-section">
-        <div class="body-toolbar">
-          <span class="body-label">JSON Body</span>
-          <button class="btn btn-ghost btn-sm" (click)="formatBody()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10H7M21 6H3M21 14H3M21 18H7"/>
-            </svg>
-            Format
-          </button>
+    <!-- ─── AUTH TAB ─── -->
+    @if (activeSubTab === 'auth') {
+      <div class="auth-section">
+        <div class="auth-type-row">
+          <label class="field-label">Type</label>
+          <select class="field-select" [ngModel]="request.auth.type" (ngModelChange)="updateAuthType($event)">
+            @for (at of authTypes; track at.value) { <option [value]="at.value">{{ at.label }}</option> }
+          </select>
         </div>
-        <textarea
-          class="body-editor"
-          [(ngModel)]="body"
-          (input)="validateBody()"
-          placeholder='{ "key": "value" }'
-          spellcheck="false"
-          id="bodyEditor"
-        ></textarea>
-        @if (bodyError) {
-          <div class="body-error">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            {{ bodyError }}
+
+        @if (request.auth.type === 'none') {
+          <div class="auth-info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>This request does not use any authorization.</p>
+          </div>
+        }
+
+        @if (request.auth.type === 'basic') {
+          <div class="auth-fields">
+            <div class="field-row"><label class="field-label">Username</label><input class="field-input" [ngModel]="request.auth.basic.username" (ngModelChange)="updateAuthField('basic', 'username', $event)" placeholder="Username" /></div>
+            <div class="field-row"><label class="field-label">Password</label><input class="field-input" type="password" [ngModel]="request.auth.basic.password" (ngModelChange)="updateAuthField('basic', 'password', $event)" placeholder="Password" /></div>
+          </div>
+        }
+
+        @if (request.auth.type === 'bearer') {
+          <div class="auth-fields">
+            <div class="field-row"><label class="field-label">Prefix</label><input class="field-input" [ngModel]="request.auth.bearer.prefix" (ngModelChange)="updateAuthField('bearer', 'prefix', $event)" placeholder="Bearer" /></div>
+            <div class="field-row"><label class="field-label">Token</label><textarea class="field-textarea" [ngModel]="request.auth.bearer.token" (ngModelChange)="updateAuthField('bearer', 'token', $event)" placeholder="Enter token" rows="3"></textarea></div>
+          </div>
+        }
+
+        @if (request.auth.type === 'apikey') {
+          <div class="auth-fields">
+            <div class="field-row"><label class="field-label">Key</label><input class="field-input" [ngModel]="request.auth.apikey.key" (ngModelChange)="updateAuthField('apikey', 'key', $event)" placeholder="X-API-Key" /></div>
+            <div class="field-row"><label class="field-label">Value</label><input class="field-input" [ngModel]="request.auth.apikey.value" (ngModelChange)="updateAuthField('apikey', 'value', $event)" placeholder="API key value" /></div>
+            <div class="field-row">
+              <label class="field-label">Add to</label>
+              <select class="field-select" [ngModel]="request.auth.apikey.addTo" (ngModelChange)="updateAuthField('apikey', 'addTo', $event)">
+                <option value="header">Header</option>
+                <option value="query">Query Params</option>
+              </select>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ─── HEADERS TAB ─── -->
+    @if (activeSubTab === 'headers') {
+      <div class="kv-section">
+        <div class="kv-header">
+          <span>Request Headers</span>
+          <button class="btn-xs btn-ghost" (click)="addPair('headers')">+ Add</button>
+        </div>
+        <div class="kv-table">
+          <div class="kv-head">
+            <span class="kv-check-col"></span>
+            <span class="kv-col">Key</span>
+            <span class="kv-col">Value</span>
+            <span class="kv-col-desc">Description</span>
+            <span class="kv-act-col"></span>
+          </div>
+          @for (h of request.headers; track h.id; let i = $index) {
+            <div class="kv-row" [class.disabled]="!h.enabled">
+              <input type="checkbox" class="kv-check" [checked]="h.enabled" (change)="togglePair('headers', i)" />
+              <input class="kv-input" [value]="h.key" (input)="updatePair('headers', i, 'key', $any($event.target).value)" placeholder="Key" />
+              <input class="kv-input" [value]="h.value" (input)="updatePair('headers', i, 'value', $any($event.target).value)" placeholder="Value" />
+              <input class="kv-input kv-desc" [value]="h.description" (input)="updatePair('headers', i, 'description', $any($event.target).value)" placeholder="Description" />
+              <button class="btn-icon-xs btn-danger" (click)="removePair('headers', i)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ─── BODY TAB ─── -->
+    @if (activeSubTab === 'body') {
+      <div class="body-section">
+        <div class="body-type-bar">
+          @for (bt of bodyTypes; track bt.value) {
+            <label class="body-radio">
+              <input type="radio" name="bodyType" [value]="bt.value" [checked]="request.body.type === bt.value" (change)="updateBodyType(bt.value)" />
+              <span>{{ bt.label }}</span>
+            </label>
+          }
+        </div>
+
+        @if (request.body.type === 'none') {
+          <div class="body-empty">
+            <p>This request does not have a body.</p>
+          </div>
+        }
+
+        <!-- Raw editors (JSON/Text/XML/HTML) -->
+        @if (request.body.type === 'json' || request.body.type === 'text' || request.body.type === 'xml' || request.body.type === 'html') {
+          <div class="raw-editor">
+            <div class="raw-toolbar">
+              <span class="raw-label">{{ request.body.type | uppercase }}</span>
+              @if (request.body.type === 'json') {
+                <button class="btn-xs btn-ghost" (click)="formatJson()">⟨/⟩ Format</button>
+              }
+            </div>
+            <textarea class="code-editor" [ngModel]="request.body.raw" (ngModelChange)="updateBodyRaw($event)" placeholder="Enter request body here..." spellcheck="false"></textarea>
+            @if (bodyError) {
+              <div class="body-error">⚠ {{ bodyError }}</div>
+            }
+          </div>
+        }
+
+        <!-- Form Data -->
+        @if (request.body.type === 'formdata') {
+          <div class="kv-section">
+            <div class="kv-header"><span>Form Data</span><button class="btn-xs btn-ghost" (click)="addBodyPair('formData')">+ Add</button></div>
+            <div class="kv-table">
+              <div class="kv-head"><span class="kv-check-col"></span><span class="kv-col">Key</span><span class="kv-col">Value</span><span class="kv-act-col"></span></div>
+              @for (p of request.body.formData; track p.id; let i = $index) {
+                <div class="kv-row" [class.disabled]="!p.enabled">
+                  <input type="checkbox" class="kv-check" [checked]="p.enabled" (change)="toggleBodyPair('formData', i)" />
+                  <input class="kv-input" [value]="p.key" (input)="updateBodyPair('formData', i, 'key', $any($event.target).value)" placeholder="Key" />
+                  <input class="kv-input" [value]="p.value" (input)="updateBodyPair('formData', i, 'value', $any($event.target).value)" placeholder="Value" />
+                  <button class="btn-icon-xs btn-danger" (click)="removeBodyPair('formData', i)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- URL Encoded -->
+        @if (request.body.type === 'urlencoded') {
+          <div class="kv-section">
+            <div class="kv-header"><span>URL Encoded</span><button class="btn-xs btn-ghost" (click)="addBodyPair('urlEncoded')">+ Add</button></div>
+            <div class="kv-table">
+              <div class="kv-head"><span class="kv-check-col"></span><span class="kv-col">Key</span><span class="kv-col">Value</span><span class="kv-act-col"></span></div>
+              @for (p of request.body.urlEncoded; track p.id; let i = $index) {
+                <div class="kv-row" [class.disabled]="!p.enabled">
+                  <input type="checkbox" class="kv-check" [checked]="p.enabled" (change)="toggleBodyPair('urlEncoded', i)" />
+                  <input class="kv-input" [value]="p.key" (input)="updateBodyPair('urlEncoded', i, 'key', $any($event.target).value)" placeholder="Key" />
+                  <input class="kv-input" [value]="p.value" (input)="updateBodyPair('urlEncoded', i, 'value', $any($event.target).value)" placeholder="Value" />
+                  <button class="btn-icon-xs btn-danger" (click)="removeBodyPair('urlEncoded', i)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- GraphQL -->
+        @if (request.body.type === 'graphql') {
+          <div class="graphql-section">
+            <div class="graphql-panel">
+              <label class="field-label">Query</label>
+              <textarea class="code-editor" [ngModel]="request.body.graphql.query" (ngModelChange)="updateGraphQL('query', $event)" placeholder="query { ... }" spellcheck="false" rows="8"></textarea>
+            </div>
+            <div class="graphql-panel">
+              <label class="field-label">Variables (JSON)</label>
+              <textarea class="code-editor small" [ngModel]="request.body.graphql.variables" (ngModelChange)="updateGraphQL('variables', $event)" placeholder='{ "key": "value" }' spellcheck="false" rows="4"></textarea>
+            </div>
           </div>
         }
       </div>
     }
   </div>
 </div>
+} @else {
+  <div class="empty-builder">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <p>Select a request or create a new one</p>
+  </div>
+}

@@ -1,30 +1,32 @@
-<div class="response-viewer">
-  <!-- Header -->
+<div class="viewer">
+  <!-- Header with Code Gen button -->
   <div class="viewer-header">
     <h3 class="viewer-title">Response</h3>
+    <button class="btn-sm btn-ghost" (click)="openCodeGen()" title="Generate Code">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Code
+    </button>
   </div>
 
   <!-- Loading State -->
   @if (isLoading) {
     <div class="loading-state">
-      <div class="loading-animation">
-        <div class="pulse-ring"></div>
-        <div class="pulse-ring delay-1"></div>
-        <div class="pulse-ring delay-2"></div>
+      <div class="loading-bar"><div class="loading-progress"></div></div>
+      <div class="loading-content">
+        <div class="pulse-dots"><span></span><span></span><span></span></div>
+        <span class="loading-text">Sending request...</span>
       </div>
-      <span class="loading-text">Sending request...</span>
     </div>
   }
 
   <!-- Empty State -->
   @if (!response && !isLoading) {
     <div class="empty-state">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2">
-        <line x1="22" y1="2" x2="11" y2="13"/>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-      <p class="empty-title">No response yet</p>
-      <p class="empty-subtitle">Send a request to see the response here</p>
+      <div class="empty-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.15"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </div>
+      <p class="empty-title">Hit Send to get a response</p>
+      <p class="empty-hint">Or press Ctrl + Enter</p>
     </div>
   }
 
@@ -33,75 +35,124 @@
     <!-- Status Bar -->
     <div class="status-bar">
       <span class="status-badge" [ngClass]="getStatusClass()">
+        <span class="status-icon">{{ getStatusIcon() }}</span>
         {{ response.statusCode }} {{ response.statusText }}
       </span>
       <div class="status-meta">
-        <span class="meta-item">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
+        <span class="meta-item time">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           {{ response.responseTime }} ms
         </span>
-        <span class="meta-item">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          {{ getBodySize() }}
+        <span class="meta-item size">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {{ formatSize(response.size) }}
         </span>
       </div>
     </div>
 
-    <!-- Response Toolbar -->
-    <div class="response-toolbar">
-      <div class="toolbar-tabs">
-        <button
-          class="toolbar-tab"
-          [class.active]="!showRaw"
-          (click)="showRaw = false"
-        >
-          Pretty
+    <!-- Response Sub Tabs -->
+    <div class="resp-tabs">
+      <div class="resp-tabs-left">
+        <button class="resp-tab" [class.active]="activeSubTab === 'body'" (click)="activeSubTab = 'body'">
+          Body
         </button>
-        <button
-          class="toolbar-tab"
-          [class.active]="showRaw"
-          (click)="showRaw = true"
-        >
-          Raw
+        <button class="resp-tab" [class.active]="activeSubTab === 'headers'" (click)="activeSubTab = 'headers'">
+          Headers <span class="tab-count">({{ getHeaderEntries().length }})</span>
+        </button>
+        <button class="resp-tab" [class.active]="activeSubTab === 'cookies'" (click)="activeSubTab = 'cookies'">
+          Cookies <span class="tab-count">({{ response.cookies.length }})</span>
         </button>
       </div>
-      <button class="btn-icon-sm" title="Copy to clipboard" (click)="copyBody()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Response Body -->
-    <div class="response-body-container">
-      <pre class="response-body"><code>{{ showRaw ? getRawBody() : getFormattedBody() }}</code></pre>
-    </div>
-
-    <!-- Response Headers (collapsible) -->
-    @if (getHeaderEntries().length > 0) {
-      <details class="response-headers-section">
-        <summary class="headers-summary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h16M4 12h16M4 17h10"/>
-          </svg>
-          Response Headers ({{ getHeaderEntries().length }})
-        </summary>
-        <div class="headers-list">
-          @for (header of getHeaderEntries(); track header.key) {
-            <div class="header-entry">
-              <span class="header-key">{{ header.key }}</span>
-              <span class="header-value">{{ header.value }}</span>
-            </div>
-          }
+      @if (activeSubTab === 'body') {
+        <div class="resp-tabs-right">
+          <div class="view-toggle">
+            <button class="toggle-btn" [class.active]="bodyView === 'pretty'" (click)="bodyView = 'pretty'">Pretty</button>
+            <button class="toggle-btn" [class.active]="bodyView === 'raw'" (click)="bodyView = 'raw'">Raw</button>
+            <button class="toggle-btn" [class.active]="bodyView === 'preview'" (click)="bodyView = 'preview'">Preview</button>
+          </div>
+          <button class="btn-icon-sm" title="Copy body" (click)="copyBody()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
         </div>
-      </details>
+      }
+    </div>
+
+    <!-- Body Content -->
+    @if (activeSubTab === 'body') {
+      <div class="body-container">
+        @if (bodyView === 'preview') {
+          <iframe class="preview-frame" [srcdoc]="getRawBody()" sandbox=""></iframe>
+        } @else {
+          <pre class="response-body"><code>{{ getDisplayBody() }}</code></pre>
+        }
+      </div>
+    }
+
+    <!-- Headers Tab -->
+    @if (activeSubTab === 'headers') {
+      <div class="headers-container">
+        @if (getHeaderEntries().length === 0) {
+          <div class="no-data">No headers returned</div>
+        }
+        @for (h of getHeaderEntries(); track h.key) {
+          <div class="header-row">
+            <span class="header-key">{{ h.key }}</span>
+            <span class="header-value">{{ h.value }}</span>
+            <button class="btn-icon-xs" (click)="copyText(h.value)" title="Copy value">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Cookies Tab -->
+    @if (activeSubTab === 'cookies') {
+      <div class="cookies-container">
+        @if (response.cookies.length === 0) {
+          <div class="no-data">No cookies in the response<br><span class="no-data-hint">Note: Browsers restrict Set-Cookie headers in CORS responses</span></div>
+        }
+        @for (cookie of response.cookies; track cookie.name) {
+          <div class="cookie-row">
+            <span class="cookie-name">{{ cookie.name }}</span>
+            <span class="cookie-value">{{ cookie.value }}</span>
+            <div class="cookie-attrs">
+              @if (cookie.domain) { <span class="cookie-attr">Domain: {{ cookie.domain }}</span> }
+              @if (cookie.path) { <span class="cookie-attr">Path: {{ cookie.path }}</span> }
+              @if (cookie.httpOnly) { <span class="cookie-attr flag">HttpOnly</span> }
+              @if (cookie.secure) { <span class="cookie-attr flag">Secure</span> }
+            </div>
+          </div>
+        }
+      </div>
     }
   }
 </div>
+
+<!-- ═══ Code Generation Modal ═══ -->
+@if (showCodeGen) {
+  <div class="modal-overlay" (click)="closeCodeGen()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Code Snippet</h3>
+        <button class="btn-icon-sm" (click)="closeCodeGen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="code-lang-selector">
+          @for (lang of codeLanguages; track lang.value) {
+            <button class="lang-btn" [class.active]="codeLanguage === lang.value" (click)="onLanguageChange(lang.value)">{{ lang.label }}</button>
+          }
+        </div>
+        <div class="code-block-wrapper">
+          <button class="code-copy-btn" (click)="copyCode()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+          <pre class="code-block"><code>{{ generatedCode }}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+}

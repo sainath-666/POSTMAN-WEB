@@ -1,141 +1,101 @@
 /*
  * ═══════════════════════════════════════════════════════
  *  Smart API Tester — Global Design System
+ *  Dark + Light theme with comprehensive design tokens.
  * ═══════════════════════════════════════════════════════
- *
- *  Dark theme with premium color palette.
- *  All design tokens are defined as CSS custom properties.
  */
 
-/* ─── Google Fonts are loaded in index.html ─── */
-
 /* ─── CSS Reset ─── */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  height: 100%; width: 100%; overflow: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Design Tokens (Dark Theme) ─── */
-:root {
-  /* Surfaces */
-  --surface-primary: #0f0f1a;
-  --surface-secondary: #151525;
-  --surface-elevated: #1a1a2e;
-  --surface-hover: #22223a;
-
-  /* Text */
-  --text-primary: #e8e8f0;
-  --text-secondary: #a0a0b8;
-  --text-muted: #6b6b82;
-
-  /* Borders */
-  --border-color: #2a2a40;
-
-  /* Accent — Indigo/Violet */
+/* ─── Dark Theme (default) ─── */
+:root, [data-theme="dark"] {
+  --surface-primary: #0d0d1a;
+  --surface-secondary: #13132a;
+  --surface-elevated: #191933;
+  --surface-hover: #1e1e3a;
+  --text-primary: #e6e6f0;
+  --text-secondary: #9d9db8;
+  --text-muted: #5f5f7a;
+  --border-color: #252545;
   --accent: #6366f1;
   --accent-rgb: 99, 102, 241;
   --accent-muted: #4f46e5;
   --accent-light: #818cf8;
-
-  /* Status Colors */
   --status-success: #4ade80;
   --status-success-rgb: 74, 222, 128;
   --status-warning: #fbbf24;
   --status-warning-rgb: 251, 191, 36;
   --status-error: #f87171;
   --status-error-rgb: 248, 113, 113;
-
-  /* HTTP Method Colors */
-  --method-get: #4ade80;
-  --method-get-rgb: 74, 222, 128;
-  --method-post: #60a5fa;
-  --method-post-rgb: 96, 165, 250;
-  --method-put: #fbbf24;
-  --method-put-rgb: 251, 191, 36;
-  --method-delete: #f87171;
-  --method-delete-rgb: 248, 113, 113;
-  --method-patch: #c084fc;
-  --method-patch-rgb: 192, 132, 252;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
+  --method-get: #4ade80; --method-get-rgb: 74, 222, 128;
+  --method-post: #60a5fa; --method-post-rgb: 96, 165, 250;
+  --method-put: #fbbf24; --method-put-rgb: 251, 191, 36;
+  --method-delete: #f87171; --method-delete-rgb: 248, 113, 113;
+  --method-patch: #c084fc; --method-patch-rgb: 192, 132, 252;
+  --method-head: #a78bfa; --method-head-rgb: 167, 139, 250;
+  --method-options: #67e8f9; --method-options-rgb: 103, 232, 249;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
 }
 
-/* ─── Scrollbar Styles ─── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ─── Light Theme ─── */
+[data-theme="light"] {
+  --surface-primary: #f8f9fc;
+  --surface-secondary: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: #f0f1f5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a68;
+  --text-muted: #8888a0;
+  --border-color: #e2e3ec;
+  --accent: #4f46e5;
+  --accent-rgb: 79, 70, 229;
+  --accent-muted: #6366f1;
+  --accent-light: #818cf8;
+  --status-success: #16a34a;
+  --status-success-rgb: 22, 163, 74;
+  --status-warning: #ca8a04;
+  --status-warning-rgb: 202, 138, 4;
+  --status-error: #dc2626;
+  --status-error-rgb: 220, 38, 38;
+  --method-get: #16a34a; --method-get-rgb: 22, 163, 74;
+  --method-post: #2563eb; --method-post-rgb: 37, 99, 235;
+  --method-put: #ca8a04; --method-put-rgb: 202, 138, 4;
+  --method-delete: #dc2626; --method-delete-rgb: 220, 38, 38;
+  --method-patch: #9333ea; --method-patch-rgb: 147, 51, 234;
+  --method-head: #7c3aed; --method-head-rgb: 124, 58, 237;
+  --method-options: #0891b2; --method-options-rgb: 8, 145, 178;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ─── Selection ─── */
-::selection {
-  background: rgba(var(--accent-rgb), 0.3);
-  color: var(--text-primary);
-}
+::selection { background: rgba(var(--accent-rgb), 0.25); color: var(--text-primary); }
 
-/* ─── Focus Styles ─── */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+/* ─── Focus ─── */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* ─── Body Background ─── */
-body {
-  background: var(--surface-primary);
-  color: var(--text-primary);
-}
+/* ─── Body ─── */
+body { background: var(--surface-primary); color: var(--text-primary); }
 
-/* ─── Link Reset ─── */
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-/* ─── Button Reset ─── */
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
-
-/* ─── Input Reset ─── */
-input, textarea, select {
-  font-family: inherit;
-}
-
-select option {
-  background: var(--surface-elevated);
-  color: var(--text-primary);
-}
+/* ─── Resets ─── */
+a { color: var(--accent); text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input, textarea, select { font-family: inherit; }
+select option { background: var(--surface-elevated); color: var(--text-primary); }

@@ -1,104 +1,320 @@
 import { Injectable } from '@angular/core';
-import { ApiCollection, ApiRequest } from '../models/api.models';
+import {
+  ApiCollection, ApiRequest, CollectionFolder, Environment, HistoryEntry,
+  generateId, createDefaultRequest, deepClone
+} from '../models/api.models';
 
 /**
- * StorageService handles all localStorage operations for persisting
- * collections and requests. Uses JSON stringify/parse for serialization.
+ * StorageService handles ALL localStorage persistence for the application.
+ * Manages collections, environments, history, and user preferences.
  */
 @Injectable({ providedIn: 'root' })
 export class StorageService {
-  private readonly STORAGE_KEY = 'smart-api-tester-collections';
+  private readonly KEYS = {
+    collections: 'sat-collections',
+    environments: 'sat-environments',
+    activeEnv: 'sat-active-env',
+    history: 'sat-history',
+    theme: 'sat-theme',
+    sidebarWidth: 'sat-sidebar-width',
+    consoleOpen: 'sat-console-open',
+  };
 
-  /** Generate a unique ID for collections and requests */
-  generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-  }
+  private readonly MAX_HISTORY = 100;
 
-  /** Load all collections from localStorage */
+  // ──────────────────────────────────
+  //  COLLECTIONS
+  // ──────────────────────────────────
+
   getCollections(): ApiCollection[] {
-    try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      console.error('Failed to parse collections from localStorage');
-      return [];
-    }
+    return this.read<ApiCollection[]>(this.KEYS.collections) || [];
   }
 
-  /** Save all collections to localStorage */
   saveCollections(collections: ApiCollection[]): void {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(collections));
-    } catch (e) {
-      console.error('Failed to save collections to localStorage', e);
-    }
+    this.write(this.KEYS.collections, collections);
   }
 
-  /** Add a new collection */
-  addCollection(name: string): ApiCollection[] {
+  addCollection(name: string, description = ''): ApiCollection[] {
     const collections = this.getCollections();
-    const newCollection: ApiCollection = {
-      id: this.generateId(),
+    collections.push({
+      id: generateId(),
       name,
+      description,
       requests: [],
-    };
-    collections.push(newCollection);
+      folders: [],
+    });
     this.saveCollections(collections);
     return collections;
   }
 
-  /** Rename a collection */
-  renameCollection(id: string, newName: string): ApiCollection[] {
+  renameCollection(id: string, name: string): ApiCollection[] {
     const collections = this.getCollections();
-    const collection = collections.find((c) => c.id === id);
-    if (collection) {
-      collection.name = newName;
-      this.saveCollections(collections);
-    }
+    const col = collections.find((c) => c.id === id);
+    if (col) col.name = name;
+    this.saveCollections(collections);
     return collections;
   }
 
-  /** Delete a collection */
   deleteCollection(id: string): ApiCollection[] {
-    let collections = this.getCollections();
-    collections = collections.filter((c) => c.id !== id);
+    const collections = this.getCollections().filter((c) => c.id !== id);
     this.saveCollections(collections);
     return collections;
   }
 
-  /** Add a request to a collection */
-  addRequest(collectionId: string, request: ApiRequest): ApiCollection[] {
+  duplicateCollection(id: string): ApiCollection[] {
     const collections = this.getCollections();
-    const collection = collections.find((c) => c.id === collectionId);
-    if (collection) {
-      collection.requests.push(request);
+    const original = collections.find((c) => c.id === id);
+    if (original) {
+      const clone = deepClone(original);
+      clone.id = generateId();
+      clone.name = original.name + ' (Copy)';
+      // Regenerate IDs for all nested items
+      clone.requests.forEach((r) => (r.id = generateId()));
+      clone.folders.forEach((f) => {
+        f.id = generateId();
+        f.requests.forEach((r) => (r.id = generateId()));
+      });
+      collections.push(clone);
+      this.saveCollections(collections);
+    }
+    return this.getCollections();
+  }
+
+  // ──────────────────────────────────
+  //  FOLDERS
+  // ──────────────────────────────────
+
+  addFolder(collectionId: string, name: string): ApiCollection[] {
+    const collections = this.getCollections();
+    const col = collections.find((c) => c.id === collectionId);
+    if (col) {
+      col.folders.push({ id: generateId(), name, requests: [] });
       this.saveCollections(collections);
     }
     return collections;
   }
 
-  /** Update an existing request within a collection */
-  updateRequest(collectionId: string, request: ApiRequest): ApiCollection[] {
+  renameFolder(collectionId: string, folderId: string, name: string): ApiCollection[] {
     const collections = this.getCollections();
-    const collection = collections.find((c) => c.id === collectionId);
-    if (collection) {
-      const idx = collection.requests.findIndex((r) => r.id === request.id);
-      if (idx !== -1) {
-        collection.requests[idx] = request;
-        this.saveCollections(collections);
+    const col = collections.find((c) => c.id === collectionId);
+    const folder = col?.folders.find((f) => f.id === folderId);
+    if (folder) folder.name = name;
+    this.saveCollections(collections);
+    return collections;
+  }
+
+  deleteFolder(collectionId: string, folderId: string): ApiCollection[] {
+    const collections = this.getCollections();
+    const col = collections.find((c) => c.id === collectionId);
+    if (col) {
+      col.folders = col.folders.filter((f) => f.id !== folderId);
+      this.saveCollections(collections);
+    }
+    return collections;
+  }
+
+  // ──────────────────────────────────
+  //  REQUESTS
+  // ──────────────────────────────────
+
+  addRequest(collectionId: string, request: ApiRequest, folderId?: string): ApiCollection[] {
+    const collections = this.getCollections();
+    const col = collections.find((c) => c.id === collectionId);
+    if (!col) return collections;
+    if (folderId) {
+      const folder = col.folders.find((f) => f.id === folderId);
+      if (folder) folder.requests.push(deepClone(request));
+    } else {
+      col.requests.push(deepClone(request));
+    }
+    this.saveCollections(collections);
+    return collections;
+  }
+
+  updateRequest(collectionId: string, request: ApiRequest, folderId?: string): ApiCollection[] {
+    const collections = this.getCollections();
+    const col = collections.find((c) => c.id === collectionId);
+    if (!col) return collections;
+
+    if (folderId) {
+      const folder = col.folders.find((f) => f.id === folderId);
+      if (folder) {
+        const idx = folder.requests.findIndex((r) => r.id === request.id);
+        if (idx !== -1) folder.requests[idx] = deepClone(request);
       }
+    } else {
+      const idx = col.requests.findIndex((r) => r.id === request.id);
+      if (idx !== -1) col.requests[idx] = deepClone(request);
     }
+    this.saveCollections(collections);
     return collections;
   }
 
-  /** Delete a request from a collection */
-  deleteRequest(collectionId: string, requestId: string): ApiCollection[] {
+  deleteRequest(collectionId: string, requestId: string, folderId?: string): ApiCollection[] {
     const collections = this.getCollections();
-    const collection = collections.find((c) => c.id === collectionId);
-    if (collection) {
-      collection.requests = collection.requests.filter((r) => r.id !== requestId);
+    const col = collections.find((c) => c.id === collectionId);
+    if (!col) return collections;
+
+    if (folderId) {
+      const folder = col.folders.find((f) => f.id === folderId);
+      if (folder) folder.requests = folder.requests.filter((r) => r.id !== requestId);
+    } else {
+      col.requests = col.requests.filter((r) => r.id !== requestId);
+    }
+    this.saveCollections(collections);
+    return collections;
+  }
+
+  duplicateRequest(collectionId: string, requestId: string, folderId?: string): ApiCollection[] {
+    const collections = this.getCollections();
+    const col = collections.find((c) => c.id === collectionId);
+    if (!col) return collections;
+
+    const sourceList = folderId
+      ? col.folders.find((f) => f.id === folderId)?.requests
+      : col.requests;
+    if (!sourceList) return collections;
+
+    const original = sourceList.find((r) => r.id === requestId);
+    if (original) {
+      const clone = deepClone(original);
+      clone.id = generateId();
+      clone.name = original.name + ' (Copy)';
+      sourceList.push(clone);
       this.saveCollections(collections);
     }
-    return collections;
+    return this.getCollections();
+  }
+
+  // ──────────────────────────────────
+  //  ENVIRONMENTS
+  // ──────────────────────────────────
+
+  getEnvironments(): Environment[] {
+    return this.read<Environment[]>(this.KEYS.environments) || [];
+  }
+
+  saveEnvironments(envs: Environment[]): void {
+    this.write(this.KEYS.environments, envs);
+  }
+
+  getActiveEnvironmentId(): string | null {
+    return this.read<string>(this.KEYS.activeEnv) || null;
+  }
+
+  setActiveEnvironmentId(id: string | null): void {
+    this.write(this.KEYS.activeEnv, id);
+  }
+
+  // ──────────────────────────────────
+  //  HISTORY
+  // ──────────────────────────────────
+
+  getHistory(): HistoryEntry[] {
+    return this.read<HistoryEntry[]>(this.KEYS.history) || [];
+  }
+
+  addHistory(entry: HistoryEntry): HistoryEntry[] {
+    let history = this.getHistory();
+    history.unshift(entry);
+    if (history.length > this.MAX_HISTORY) {
+      history = history.slice(0, this.MAX_HISTORY);
+    }
+    this.write(this.KEYS.history, history);
+    return history;
+  }
+
+  clearHistory(): void {
+    this.write(this.KEYS.history, []);
+  }
+
+  // ──────────────────────────────────
+  //  PREFERENCES
+  // ──────────────────────────────────
+
+  getTheme(): string {
+    return this.read<string>(this.KEYS.theme) || 'dark';
+  }
+
+  setTheme(theme: string): void {
+    this.write(this.KEYS.theme, theme);
+  }
+
+  getConsoleOpen(): boolean {
+    return this.read<boolean>(this.KEYS.consoleOpen) || false;
+  }
+
+  setConsoleOpen(open: boolean): void {
+    this.write(this.KEYS.consoleOpen, open);
+  }
+
+  // ──────────────────────────────────
+  //  IMPORT / EXPORT
+  // ──────────────────────────────────
+
+  exportCollections(): string {
+    const data = {
+      version: '1.0',
+      app: 'smart-api-tester',
+      exportedAt: new Date().toISOString(),
+      collections: this.getCollections(),
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  importCollections(jsonString: string): ApiCollection[] {
+    try {
+      const data = JSON.parse(jsonString);
+      const imported: ApiCollection[] = data.collections || data;
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+
+      // Regenerate all IDs to avoid conflicts
+      const existing = this.getCollections();
+      imported.forEach((col) => {
+        col.id = generateId();
+        col.requests?.forEach((r) => (r.id = generateId()));
+        col.folders?.forEach((f) => {
+          f.id = generateId();
+          f.requests?.forEach((r) => (r.id = generateId()));
+        });
+        // Ensure all fields exist
+        col.folders = col.folders || [];
+        col.description = col.description || '';
+        existing.push(col);
+      });
+
+      this.saveCollections(existing);
+      return existing;
+    } catch (e) {
+      throw new Error('Failed to import: Invalid JSON format');
+    }
+  }
+
+  exportEnvironments(): string {
+    return JSON.stringify({
+      version: '1.0',
+      environments: this.getEnvironments(),
+    }, null, 2);
+  }
+
+  // ──────────────────────────────────
+  //  HELPERS
+  // ──────────────────────────────────
+
+  private read<T>(key: string): T | null {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private write(key: string, data: any): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error(`Failed to write to localStorage (key: ${key})`, e);
+    }
   }
 }

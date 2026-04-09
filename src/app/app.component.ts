@@ -1,122 +1,108 @@
-import { Component, inject, OnInit, ViewChild } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { TabBarComponent } from './components/tab-bar/tab-bar.component';
 import { RequestBuilderComponent } from './components/request-builder/request-builder.component';
 import { ResponseViewerComponent } from './components/response-viewer/response-viewer.component';
+import { ConsolePanelComponent } from './components/console-panel/console-panel.component';
+import { EnvironmentModalComponent } from './components/environment-modal/environment-modal.component';
 import { ToastComponent } from './components/toast/toast.component';
+import { TabService } from './services/tab.service';
+import { EnvironmentService } from './services/environment.service';
 import { StorageService } from './services/storage.service';
 import { ToastService } from './services/toast.service';
-import { ApiCollection, ApiRequest, ApiResponse } from './models/api.models';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     SidebarComponent,
+    TabBarComponent,
     RequestBuilderComponent,
     ResponseViewerComponent,
+    ConsolePanelComponent,
+    EnvironmentModalComponent,
     ToastComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class App implements OnInit {
-  @ViewChild(RequestBuilderComponent) requestBuilder!: RequestBuilderComponent;
+export class App {
+  tabService = inject(TabService);
+  envService = inject(EnvironmentService);
+  storage = inject(StorageService);
+  toast = inject(ToastService);
 
-  private storage = inject(StorageService);
-  private toast = inject(ToastService);
+  /** UI state */
+  sidebarOpen = true;
+  consoleOpen = false;
+  showEnvModal = false;
+  theme: 'dark' | 'light' = 'dark';
 
-  /** All collections loaded from localStorage */
-  collections: ApiCollection[] = [];
+  constructor() {
+    // Load preferences
+    this.consoleOpen = this.storage.getConsoleOpen();
+    this.theme = this.storage.getTheme() as 'dark' | 'light';
+    this.applyTheme();
+  }
 
-  /** Currently active request being edited */
-  activeRequest: ApiRequest | null = null;
+  /** Global keyboard shortcuts */
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    const ctrl = event.ctrlKey || event.metaKey;
 
-  /** ID of the collection the active request belongs to */
-  activeCollectionId: string | null = null;
-
-  /** ID of the active request (for sidebar highlighting) */
-  activeRequestId: string = '';
-
-  /** API response from the last request */
-  response: ApiResponse | null = null;
-
-  /** Loading state for API calls */
-  isLoading: boolean = false;
-
-  /** Mobile sidebar toggle */
-  sidebarOpen: boolean = true;
-
-  ngOnInit(): void {
-    this.collections = this.storage.getCollections();
-
-    // If no collections exist, create a sample one
-    if (this.collections.length === 0) {
-      this.createSampleData();
+    // Ctrl+T: New tab
+    if (ctrl && event.key === 't') {
+      event.preventDefault();
+      this.tabService.openNewTab();
+    }
+    // Ctrl+W: Close tab
+    if (ctrl && event.key === 'w') {
+      event.preventDefault();
+      const tab = this.tabService.activeTab();
+      if (tab) this.tabService.closeTab(tab.id);
+    }
+    // Ctrl+Enter: Send request (handled in request builder)
+    // Ctrl+S: Save request
+    if (ctrl && event.key === 's') {
+      event.preventDefault();
+      // Trigger save from request builder via custom event
+    }
+    // Ctrl+E: Toggle environment
+    if (ctrl && event.key === 'e') {
+      event.preventDefault();
+      this.showEnvModal = !this.showEnvModal;
+    }
+    // Ctrl+`: Toggle console
+    if (ctrl && event.key === '`') {
+      event.preventDefault();
+      this.toggleConsole();
     }
   }
 
-  /** Create sample data for first-time users */
-  private createSampleData(): void {
-    const sampleRequest: ApiRequest = {
-      id: this.storage.generateId(),
-      name: 'Get Posts',
-      method: 'GET',
-      url: 'https://jsonplaceholder.typicode.com/posts',
-      headers: [],
-      body: '',
-    };
-
-    this.collections = this.storage.addCollection('Sample Collection');
-    const collection = this.collections[0];
-    this.collections = this.storage.addRequest(collection.id, sampleRequest);
-    this.toast.info('Welcome! A sample collection has been created.');
-  }
-
-  /** Handle collection list changes from sidebar */
-  onCollectionsChange(collections: ApiCollection[]): void {
-    this.collections = collections;
-  }
-
-  /** Handle request selection from sidebar */
-  onRequestSelected(event: { collection: ApiCollection; request: ApiRequest }): void {
-    this.activeRequest = { ...event.request };
-    this.activeCollectionId = event.collection.id;
-    this.activeRequestId = event.request.id;
-    this.response = null;
-  }
-
-  /** Handle "New Request" from sidebar */
-  onNewRequest(collectionId: string): void {
-    this.activeCollectionId = collectionId;
-    this.activeRequest = null;
-    this.activeRequestId = '';
-    this.response = null;
-    if (this.requestBuilder) {
-      this.requestBuilder.resetForm();
-    }
-  }
-
-  /** Handle response from API call */
-  onResponseReceived(response: ApiResponse): void {
-    this.response = response;
-  }
-
-  /** Handle loading state changes */
-  onLoadingChange(loading: boolean): void {
-    this.isLoading = loading;
-  }
-
-  /** Handle request saved event */
-  onRequestSaved(event: { collectionId: string; request: ApiRequest }): void {
-    this.activeCollectionId = event.collectionId;
-    this.activeRequestId = event.request.id;
-    this.activeRequest = { ...event.request };
-  }
-
-  /** Toggle sidebar on mobile */
-  toggleSidebar(): void {
+  toggleSidebar() {
     this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  toggleConsole() {
+    this.consoleOpen = !this.consoleOpen;
+    this.storage.setConsoleOpen(this.consoleOpen);
+  }
+
+  toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    this.storage.setTheme(this.theme);
+    this.applyTheme();
+  }
+
+  private applyTheme() {
+    document.documentElement.setAttribute('data-theme', this.theme);
+  }
+
+  setActiveEnvironment(id: string | null) {
+    this.envService.setActive(id);
   }
 }

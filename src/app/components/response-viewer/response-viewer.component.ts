@@ -1,89 +1,169 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApiResponse } from '../../models/api.models';
+import { FormsModule } from '@angular/forms';
+import { TabService } from '../../services/tab.service';
+import { CodeGeneratorService } from '../../services/code-generator.service';
+import { ToastService } from '../../services/toast.service';
+import { ApiResponse, CodeLanguage } from '../../models/api.models';
 
 @Component({
   selector: 'app-response-viewer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './response-viewer.component.html',
   styleUrl: './response-viewer.component.css',
 })
 export class ResponseViewerComponent {
-  @Input() response: ApiResponse | null = null;
-  @Input() isLoading: boolean = false;
+  tabService = inject(TabService);
+  private codeGen = inject(CodeGeneratorService);
+  private toast = inject(ToastService);
 
-  /** Toggle between formatted and raw view */
-  showRaw: boolean = false;
+  tab = this.tabService.activeTab;
 
-  /** Get the CSS class for the status code badge */
-  getStatusClass(): string {
-    if (!this.response) return '';
-    const code = this.response.statusCode;
-    if (code >= 200 && code < 300) return 'status-success';
-    if (code >= 400 && code < 500) return 'status-warning';
-    if (code >= 500) return 'status-error';
-    if (code === 0) return 'status-error';
-    return 'status-info';
+  /** Active response sub-tab */
+  activeSubTab: 'body' | 'headers' | 'cookies' = 'body';
+
+  /** Body display mode */
+  bodyView: 'pretty' | 'raw' | 'preview' = 'pretty';
+
+  /** Code generation modal */
+  showCodeGen = false;
+  codeLanguage: CodeLanguage = 'curl';
+  generatedCode = '';
+
+  /** Code languages */
+  codeLanguages: { value: CodeLanguage; label: string }[] = [
+    { value: 'curl', label: 'cURL' },
+    { value: 'javascript-fetch', label: 'JavaScript - Fetch' },
+    { value: 'javascript-axios', label: 'JavaScript - Axios' },
+    { value: 'python', label: 'Python - Requests' },
+    { value: 'php', label: 'PHP - cURL' },
+    { value: 'csharp', label: 'C# - HttpClient' },
+  ];
+
+  get response(): ApiResponse | null | undefined {
+    return this.tab()?.response;
   }
 
-  /** Format the response body as pretty JSON or plain text */
+  get isLoading(): boolean {
+    return this.tab()?.isLoading || false;
+  }
+
+  // ═══════════════════════════════
+  //  STATUS
+  // ═══════════════════════════════
+
+  getStatusClass(): string {
+    if (!this.response) return '';
+    const c = this.response.statusCode;
+    if (c >= 200 && c < 300) return 'status-success';
+    if (c >= 300 && c < 400) return 'status-redirect';
+    if (c >= 400 && c < 500) return 'status-warning';
+    if (c >= 500) return 'status-error';
+    return 'status-error';
+  }
+
+  getStatusIcon(): string {
+    if (!this.response) return '';
+    const c = this.response.statusCode;
+    if (c >= 200 && c < 300) return '✓';
+    if (c >= 400) return '✕';
+    return '→';
+  }
+
+  // ═══════════════════════════════
+  //  BODY FORMATTING
+  // ═══════════════════════════════
+
   getFormattedBody(): string {
     if (!this.response) return '';
     try {
       if (typeof this.response.body === 'object') {
         return JSON.stringify(this.response.body, null, 2);
       }
-      // Try parsing as JSON for formatting
       const parsed = JSON.parse(this.response.body);
       return JSON.stringify(parsed, null, 2);
     } catch {
-      return typeof this.response.body === 'string'
-        ? this.response.body
-        : String(this.response.body);
+      return typeof this.response.body === 'string' ? this.response.body : String(this.response.body);
     }
   }
 
-  /** Get raw response body as string */
   getRawBody(): string {
-    if (!this.response) return '';
-    if (typeof this.response.body === 'object') {
-      return JSON.stringify(this.response.body);
-    }
-    return String(this.response.body);
+    return this.response?.rawBody || '';
   }
 
-  /** Toggle raw/formatted view */
-  toggleRaw(): void {
-    this.showRaw = !this.showRaw;
+  getDisplayBody(): string {
+    if (this.bodyView === 'raw') return this.getRawBody();
+    return this.getFormattedBody();
   }
 
-  /** Copy response body to clipboard */
-  copyBody(): void {
-    const text = this.showRaw ? this.getRawBody() : this.getFormattedBody();
-    navigator.clipboard.writeText(text).catch(() => {
-      // Fallback: use textarea
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    });
-  }
+  // ═══════════════════════════════
+  //  SIZE FORMATTING
+  // ═══════════════════════════════
 
-  /** Get response body size in a human readable format */
-  getBodySize(): string {
-    const text = this.getRawBody();
-    const bytes = new Blob([text]).size;
+  formatSize(bytes: number): string {
     if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
-  /** Get response header entries as an array */
+  // ═══════════════════════════════
+  //  HEADERS & COOKIES
+  // ═══════════════════════════════
+
   getHeaderEntries(): { key: string; value: string }[] {
     if (!this.response) return [];
     return Object.entries(this.response.headers).map(([key, value]) => ({ key, value }));
+  }
+
+  // ═══════════════════════════════
+  //  COPY
+  // ═══════════════════════════════
+
+  copyBody() {
+    const text = this.bodyView === 'raw' ? this.getRawBody() : this.getFormattedBody();
+    navigator.clipboard.writeText(text).then(() => {
+      this.toast.success('Copied to clipboard');
+    }).catch(() => {
+      this.toast.error('Failed to copy');
+    });
+  }
+
+  copyText(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      this.toast.success('Copied');
+    });
+  }
+
+  // ═══════════════════════════════
+  //  CODE GENERATION
+  // ═══════════════════════════════
+
+  openCodeGen() {
+    const tab = this.tab();
+    if (!tab) return;
+    this.showCodeGen = true;
+    this.generateCode();
+  }
+
+  generateCode() {
+    const tab = this.tab();
+    if (!tab) return;
+    this.generatedCode = this.codeGen.generate(tab.request, this.codeLanguage);
+  }
+
+  copyCode() {
+    navigator.clipboard.writeText(this.generatedCode).then(() => {
+      this.toast.success('Code copied to clipboard');
+    });
+  }
+
+  closeCodeGen() {
+    this.showCodeGen = false;
+  }
+
+  onLanguageChange(lang: CodeLanguage) {
+    this.codeLanguage = lang;
+    this.generateCode();
   }
 }
